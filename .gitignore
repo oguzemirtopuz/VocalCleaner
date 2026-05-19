@@ -10,3 +10,7 @@ dist/
 # Sistem dosyaları
 .DS_Store
 Thumbs.db
+
+# Sıkıştırılmış arşivler
+*.zip
+*.rar
