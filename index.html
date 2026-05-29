@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VocalCleaner — AI Ses İyileştirme Stüdyosu</title>
-    <meta name="description" content="Yapay zeka destekli vokal temizleme ve ses iyileştirme aracı. Düşük kaliteli kayıtlarınızı stüdyo kalitesine dönüştürün.">
+    <title>VocalCleaner — AI Audio Enhancement Studio</title>
+    <meta name="description" content="AI-powered vocal cleaning and audio enhancement tool. Transform your low-quality recordings into studio quality.">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,11 +39,11 @@
                 <nav class="header-nav">
                     <a href="#upload" class="nav-link active" data-section="upload">
                         <i data-lucide="upload-cloud"></i>
-                        <span>Yükle</span>
+                        <span>Upload</span>
                     </a>
                     <a href="#studio" class="nav-link" data-section="studio">
                         <i data-lucide="sliders-horizontal"></i>
-                        <span>Stüdyo</span>
+                        <span>Studio</span>
                     </a>
                 </nav>
             </div>
@@ -54,14 +54,14 @@
             <div class="hero-content">
                 <div class="hero-badge">
                     <i data-lucide="sparkles"></i>
-                    <span>Yapay Zeka Destekli</span>
+                    <span>AI-Powered</span>
                 </div>
                 <h2 class="hero-title">
-                    Sesinizi <span class="gradient-text">Stüdyo Kalitesine</span> Taşıyın
+                    Elevate Your Voice to <span class="gradient-text">Studio Quality</span>
                 </h2>
                 <p class="hero-subtitle">
-                    Amatör kayıtlarınızı yapay zeka ile profesyonel seviyeye yükseltin. 
-                    Arka plan gürültüsünü temizleyin, EQ'yu optimize edin ve vokalinizi parlatın.
+                    Upgrade your amateur recordings to a professional level with AI. 
+                    Clean background noise, optimize EQ, and polish your vocals.
                 </p>
             </div>
         </section>
@@ -75,17 +75,17 @@
                         <div class="upload-icon-ring ring-2"></div>
                         <i data-lucide="upload-cloud" class="upload-icon"></i>
                     </div>
-                    <h3 class="upload-title">Ses Dosyanızı Yükleyin</h3>
+                    <h3 class="upload-title">Upload Your Audio File</h3>
                     <p class="upload-desc">
-                        MP3 veya WAV dosyanızı sürükleyip bırakın ya da tıklayarak seçin
+                        Drag and drop your MP3 or WAV file, or click to browse
                     </p>
                     <div class="upload-meta">
                         <span class="upload-badge"><i data-lucide="file-audio"></i> MP3, WAV</span>
-                        <span class="upload-badge"><i data-lucide="hard-drive"></i> Maks. 500MB</span>
+                        <span class="upload-badge"><i data-lucide="hard-drive"></i> Max 500MB</span>
                     </div>
                     <button class="btn btn-primary upload-btn" id="uploadBtn">
                         <i data-lucide="folder-open"></i>
-                        <span>Dosya Seç</span>
+                        <span>Select File</span>
                     </button>
                 </div>
                 <input type="file" id="fileInput" accept=".mp3,.wav,audio/mpeg,audio/wav" hidden>
@@ -98,10 +98,10 @@
                         <i data-lucide="file-audio"></i>
                     </div>
                     <div class="file-info-details">
-                        <h4 id="fileName">dosya_adi.mp3</h4>
+                        <h4 id="fileName">file_name.mp3</h4>
                         <p id="fileSize">3.2 MB • MP3</p>
                     </div>
-                    <button class="btn-icon" id="removeFileBtn" title="Dosyayı Kaldır">
+                    <button class="btn-icon" id="removeFileBtn" title="Remove File">
                         <i data-lucide="x"></i>
                     </button>
                 </div>
@@ -113,27 +113,27 @@
                 <div class="intensity-selector-wrapper">
                     <label class="intensity-label">
                         <i data-lucide="zap"></i>
-                        <span>Temizleme Şiddeti</span>
+                        <span>Cleaning Intensity</span>
                     </label>
                     <div class="intensity-selector">
                         <button class="intensity-btn" data-intensity="hafif">
-                            <span class="btn-top">Hafif</span>
-                            <span class="btn-desc">Sadece Gürültü</span>
+                            <span class="btn-top">Light</span>
+                            <span class="btn-desc">Noise Only</span>
                         </button>
                         <button class="intensity-btn active" data-intensity="orta">
-                            <span class="btn-top">Orta</span>
-                            <span class="btn-desc">Standart Bakım</span>
+                            <span class="btn-top">Medium</span>
+                            <span class="btn-desc">Standard Care</span>
                         </button>
                         <button class="intensity-btn" data-intensity="agresif">
-                            <span class="btn-top">Agresif</span>
-                            <span class="btn-desc">Maksimum Netlik</span>
+                            <span class="btn-top">Aggressive</span>
+                            <span class="btn-desc">Max Clarity</span>
                         </button>
                     </div>
                 </div>
 
                 <button class="btn btn-enhance" id="enhanceBtn">
                     <i data-lucide="wand-2"></i>
-                    <span>Sesi Kaliteleştir (Enhance)</span>
+                    <span>Enhance Audio</span>
                     <div class="btn-glow"></div>
                 </button>
             </div>
@@ -155,29 +155,29 @@
                 </div>
                 <!-- Processing Stage Info -->
                 <div class="processing-info">
-                    <h3 class="processing-title" id="processingTitle">Ses Analiz Ediliyor...</h3>
-                    <p class="processing-stage" id="processingStage">Yapay zeka modeliniz sesi inceliyor</p>
+                    <h3 class="processing-title" id="processingTitle">Analyzing Audio...</h3>
+                    <p class="processing-stage" id="processingStage">Your AI model is inspecting the audio</p>
                     <!-- Stage Steps -->
                     <div class="processing-steps">
                         <div class="step" id="step1">
                             <div class="step-dot"></div>
-                            <span>Ses analizi ve profil çıkarma</span>
+                            <span>Audio analysis and profiling</span>
                         </div>
                         <div class="step" id="step2">
                             <div class="step-dot"></div>
-                            <span>Dip sesler temizleniyor</span>
+                            <span>Background noise removal</span>
                         </div>
                         <div class="step" id="step3">
                             <div class="step-dot"></div>
-                            <span>EQ ayarlanıyor</span>
+                            <span>Adjusting EQ</span>
                         </div>
                         <div class="step" id="step4">
                             <div class="step-dot"></div>
-                            <span>Vokal parlatılıyor</span>
+                            <span>Polishing vocals</span>
                         </div>
                         <div class="step" id="step5">
                             <div class="step-dot"></div>
-                            <span>Auphonic Master İmzası ve Normalizasyon</span>
+                            <span>Auphonic Master Signature and Normalization</span>
                         </div>
                     </div>
                 </div>
@@ -189,10 +189,10 @@
             <div class="result-header">
                 <div class="result-badge">
                     <i data-lucide="check-circle-2"></i>
-                    <span>İşlem Tamamlandı</span>
+                    <span>Process Completed</span>
                 </div>
-                <h2 class="result-title">Ses Başarıyla İyileştirildi</h2>
-                <p class="result-subtitle">Orijinal ve iyileştirilmiş sesi karşılaştırın, beğendiyseniz indirin.</p>
+                <h2 class="result-title">Audio Successfully Enhanced</h2>
+                <p class="result-subtitle">Compare the original and enhanced audio, and download if you like it.</p>
             </div>
 
             <!-- A/B Comparison Player -->
@@ -201,21 +201,21 @@
                 <div class="ab-switch-wrapper">
                     <button class="ab-btn active" id="abOriginal" data-mode="original">
                         <i data-lucide="mic-off"></i>
-                        <span>Orijinal</span>
+                        <span>Original</span>
                     </button>
                     <div class="ab-switch-track">
                         <div class="ab-switch-thumb" id="abThumb"></div>
                     </div>
                     <button class="ab-btn" id="abEnhanced" data-mode="enhanced">
                         <i data-lucide="sparkles"></i>
-                        <span>Temizlenmiş</span>
+                        <span>Enhanced</span>
                     </button>
                 </div>
 
                 <!-- Active Mode Label -->
                 <div class="active-mode-label" id="activeModeLabel">
                     <span class="mode-dot original"></span>
-                    <span id="modeLabelText">Orijinal Ses</span>
+                    <span id="modeLabelText">Original Audio</span>
                 </div>
 
                 <!-- Waveform display -->
@@ -237,17 +237,17 @@
 
                 <!-- Player Controls -->
                 <div class="player-controls">
-                    <button class="ctrl-btn" id="skipBackBtn" title="5 saniye geri">
+                    <button class="ctrl-btn" id="skipBackBtn" title="Skip back 5 seconds">
                         <i data-lucide="skip-back"></i>
                     </button>
-                    <button class="ctrl-btn play-btn" id="playPauseBtn" title="Oynat/Duraklat">
+                    <button class="ctrl-btn play-btn" id="playPauseBtn" title="Play/Pause">
                         <i data-lucide="play" id="playIcon"></i>
                     </button>
-                    <button class="ctrl-btn" id="skipForwardBtn" title="5 saniye ileri">
+                    <button class="ctrl-btn" id="skipForwardBtn" title="Skip forward 5 seconds">
                         <i data-lucide="skip-forward"></i>
                     </button>
                     <div class="volume-control">
-                        <button class="ctrl-btn" id="volumeBtn" title="Ses">
+                        <button class="ctrl-btn" id="volumeBtn" title="Volume">
                             <i data-lucide="volume-2" id="volumeIcon"></i>
                         </button>
                         <input type="range" min="0" max="100" value="80" class="volume-slider" id="volumeSlider">
@@ -257,7 +257,7 @@
 
             <!-- Download Section -->
             <div class="download-section">
-                <h3 class="download-title">İndirme Seçenekleri</h3>
+                <h3 class="download-title">Download Options</h3>
                 <div class="download-options">
                     <button class="btn btn-download" id="downloadWav">
                         <div class="download-icon-wrap">
@@ -265,7 +265,7 @@
                         </div>
                         <div class="download-info">
                             <span class="download-format">WAV</span>
-                            <span class="download-quality">Kayıpsız Kalite</span>
+                            <span class="download-quality">Lossless Quality</span>
                         </div>
                     </button>
                     <button class="btn btn-download" id="downloadMp3">
@@ -283,13 +283,13 @@
             <!-- New File Button -->
             <button class="btn btn-secondary" id="newFileBtn">
                 <i data-lucide="plus"></i>
-                <span>Yeni Dosya Yükle</span>
+                <span>Upload New File</span>
             </button>
         </section>
 
         <!-- ===== FOOTER ===== -->
         <footer class="app-footer">
-            <p>© 2026 VocalCleaner — AI Ses İyileştirme Stüdyosu</p>
+            <p>© 2026 VocalCleaner — AI Audio Enhancement Studio</p>
         </footer>
     </div>
 

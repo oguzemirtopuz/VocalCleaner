@@ -8,6 +8,7 @@
 
 **VocalCleaner** is a production-grade, dual-engine AI audio enhancing studio pipeline built with **Node.js** and **Express**. It seamlessly chains the surgical noise cleaning power of **CleanVoice AI** with the premium broadcast-level mastering abilities of **Auphonic API**, converting raw, noisy recordings into polished, radio-ready studio vocals in seconds.
 
+## 🚀 Live Demo
 **VocalCleaner is deployed and live on Render!**  
 👉 **[Try VocalCleaner Live App Now!](https://vocalcleaner.onrender.com/)** 🌐
 
@@ -39,7 +40,7 @@ graph LR
 
 *   **Asynchronous Processing:** Accepts audio uploads, writes them to disk to protect RAM, boots up the CleanVoice process, and immediately returns a unique `editId` to the client. The frontend tracks the job asynchronously via status polling.
 *   **Proxy-Safe Downloader:** Features a custom redirect-tracing downloader that securely pulls mastered files from Auphonic S3 buckets, bypassing standard browser CORs policies.
-*   **Responsive Control Dashboard:** A premium web UI built with Vanilla JS and CSS3 supporting intensity parameters (Hafif, Orta, Agresif) and clean file download actions.
+*   **Responsive Control Dashboard:** A premium web UI built with Vanilla JS and CSS3 supporting intensity parameters (Light, Medium, Aggressive) and clean file download actions.
 
 ---
 

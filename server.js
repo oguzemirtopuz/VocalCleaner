@@ -3,17 +3,17 @@
  * VocalCleaner — Backend Proxy Server
  * ============================================
  *
- * Pipeline (cerrahi ayarlar):
- *   1. POST /v2/upload?filename=...  → Signed URL al
- *   2. PUT  signedUrl                → Dosyayı CleanVoice'a yükle
- *   3. POST /v2/edits                → İşleme job'ı oluştur (fillers/stutters/long_silences YOK)
- *   4. GET  /v2/edits/{id}  (poll)   → CleanVoice tamamlanana kadar bekle
- *   5. Auphonic production oluştur + başlat
- *      (denoise:false, gate:false — sadece leveler/normloudness/filtering/deess)
- *   6. Auphonic polling → DONE → download_url frontend'e döner
+ * Pipeline (surgical settings):
+ *   1. POST /v2/upload?filename=...  → Get Signed URL
+ *   2. PUT  signedUrl                → Upload file to CleanVoice
+ *   3. POST /v2/edits                → Create processing job (NO fillers/stutters/long_silences)
+ *   4. GET  /v2/edits/{id}  (poll)   → Wait until CleanVoice completes
+ *   5. Create + start Auphonic production
+ *      (denoise:false, gate:false — only leveler/normloudness/filtering/deess)
+ *   6. Auphonic polling → DONE → returns download_url to frontend
  *
- * Kurulum:
- *   1. .env dosyasına CLEANVOICE_API_KEY, AUPHONIC_USER, AUPHONIC_PASS ekleyin
+ * Setup:
+ *   1. Add CLEANVOICE_API_KEY, AUPHONIC_USER, AUPHONIC_PASS to the .env file
  *   2. npm install
  *   3. npm start
  */
@@ -31,14 +31,14 @@ const os      = require('os');
 const app  = express();
 const PORT = process.env.PORT || 3456;
 
-// ===== API AYARLARI =====
+// ===== API SETTINGS =====
 const CLEANVOICE_BASE_URL = 'https://api.cleanvoice.ai/v2';
 const CLEANVOICE_API_KEY  = process.env.CLEANVOICE_API_KEY;
 const AUPHONIC_BASE_URL   = 'https://auphonic.com/api';
 const AUPHONIC_USER       = process.env.AUPHONIC_USER;
 const AUPHONIC_PASS       = process.env.AUPHONIC_PASS;
 
-// Arka planda çalışan zincirlerin durumu (editId → chain state)
+// State of background running chains (editId → chain state)
 const chains = {};
 
 // ===== MIDDLEWARE =====
@@ -51,7 +51,7 @@ const staticPath = fs.existsSync(path.join(__dirname, 'dist'))
     : __dirname;
 app.use(express.static(staticPath));
 
-// Multer — disk üzerinde geçici dosya (büyük dosyalar RAM'i tüketmesin diye)
+// Multer — temporary file on disk (so large files do not consume RAM)
 const tmpDir = os.tmpdir();
 const upload = multer({
     storage: multer.diskStorage({
@@ -68,12 +68,12 @@ const upload = multer({
             ['audio/mpeg','audio/wav','audio/x-wav','audio/mp3'].includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Sadece MP3 ve WAV destekleniyor.'));
+            cb(new Error('Only MP3 and WAV are supported.'));
         }
     },
 });
 
-// ===== YARDIMCI =====
+// ===== HELPERS =====
 function checkKeys() {
     return !!(CLEANVOICE_API_KEY &&
               CLEANVOICE_API_KEY !== 'your_cleanvoice_api_key_here' &&
@@ -85,11 +85,11 @@ function auphonicAuth() {
 }
 
 // =========================================================================
-// ENDPOINT: Ses İyileştirme   POST /api/enhance
+// ENDPOINT: Audio Enhancement   POST /api/enhance
 //
-// • CleanVoice'a dosya yükler ve edit job açar
-// • Arka planda zinciri (CleanVoice → Auphonic) asenkron başlatır
-// • Frontend'e hemen { editId } döner; durum polling ile takip edilir
+// • Uploads file to CleanVoice and opens an edit job
+// • Starts the chain (CleanVoice → Auphonic) asynchronously in the background
+// • Returns { editId } to frontend immediately; status is tracked via polling
 // =========================================================================
 app.post('/api/enhance', upload.single('audio'), async (req, res) => {
     let filePath = null;
@@ -97,20 +97,20 @@ app.post('/api/enhance', upload.single('audio'), async (req, res) => {
         if (!CLEANVOICE_API_KEY || CLEANVOICE_API_KEY === 'your_cleanvoice_api_key_here') {
             return res.status(500).json({
                 error: 'API_KEY_MISSING',
-                message: 'CLEANVOICE_API_KEY .env dosyasında tanımlanmamış.',
+                message: 'CLEANVOICE_API_KEY is not defined in the .env file.',
             });
         }
         if (!req.file) {
-            return res.status(400).json({ error: 'NO_FILE', message: 'Ses dosyası bulunamadı.' });
+            return res.status(400).json({ error: 'NO_FILE', message: 'Audio file not found.' });
         }
 
         filePath = req.file.path;
         const filename  = req.file.originalname;
         const intensity = (req.body?.intensity ?? 'orta').toLowerCase().trim();
 
-        console.log(`\n[VC] ── Yeni İstek ──────────────────────────────────`);
-        console.log(`[VC] Dosya    : ${filename} (${(req.file.size/1024/1024).toFixed(1)} MB)`);
-        console.log(`[VC] Şiddet   : ${intensity}`);
+        console.log(`\n[VC] ── New Request ──────────────────────────────────`);
+        console.log(`[VC] File     : ${filename} (${(req.file.size/1024/1024).toFixed(1)} MB)`);
+        console.log(`[VC] Intensity: ${intensity}`);
 
         // ── 1. Signed URL ──────────────────────────────────────────────
         const upRes = await fetch(
@@ -120,14 +120,14 @@ app.post('/api/enhance', upload.single('audio'), async (req, res) => {
         if (!upRes.ok) {
             const errText = await upRes.text();
             let errorMsg = `Upload URL: ${upRes.status} — ${errText}`;
-            if (upRes.status === 401) errorMsg = "API Anahtarı Geçersiz (401)";
-            else if (upRes.status === 429) errorMsg = "Limit Bitti (429)";
+            if (upRes.status === 401) errorMsg = "Invalid API Key (401)";
+            else if (upRes.status === 429) errorMsg = "Limit Exceeded (429)";
             throw new Error(errorMsg);
         }
         const { signedUrl } = await upRes.json();
-        console.log('[VC] Signed URL alındı.');
+        console.log('[VC] Get Signed URLındı.');
 
-        // ── 2. Dosyayı yükle ───────────────────────────────────────────
+        // ── 2. Upload the file ───────────────────────────────────────────
         const stat = fs.statSync(filePath);
         const stream = fs.createReadStream(filePath);
 
@@ -138,11 +138,11 @@ app.post('/api/enhance', upload.single('audio'), async (req, res) => {
                 'Content-Length': String(stat.size)
             },
             body:    stream,
-            duplex:  'half' // Node.js fetch için stream gönderirken gereklidir
+            duplex:  'half' // Required when sending a stream with Node.js fetch
         });
         if (!putRes.ok) throw new Error(`PUT: ${putRes.status} — ${await putRes.text()}`);
         const fileUrl = signedUrl.split('?')[0];
-        console.log('[VC] Dosya yüklendi.');
+        console.log('[VC] File uploaded.');
 
         // ── 3. CleanVoice edit job ─────────────────────────────────────
         const config = buildCleanvoiceConfig(intensity);
@@ -156,20 +156,20 @@ app.post('/api/enhance', upload.single('audio'), async (req, res) => {
         if (!editRes.ok) {
             const errText = await editRes.text();
             let errorMsg = `Edit: ${editRes.status} — ${errText}`;
-            if (editRes.status === 401) errorMsg = "API Anahtarı Geçersiz (401)";
-            else if (editRes.status === 429) errorMsg = "Limit Bitti (429)";
+            if (editRes.status === 401) errorMsg = "Invalid API Key (401)";
+            else if (editRes.status === 429) errorMsg = "Limit Exceeded (429)";
             throw new Error(errorMsg);
         }
 
         const { id: editId } = await editRes.json();
         console.log(`[VC] Edit job: ${editId}`);
 
-        // Zincir kaydı
+        // Chain record
         chains[editId] = { phase: 'CLEANVOICE', finalUrl: null, error: null };
 
-        // Arka planda başlat (bloklama yok)
+        // Start in the background (no blocking)
         runChain(editId).catch(err => {
-            console.error(`[VC] Zincir hatası (${editId}):`, err.message);
+            console.error(`[VC] Chain error (${editId}):`, err.message);
             chains[editId].phase = 'FAILURE';
             chains[editId].error = err.message;
         });
@@ -177,92 +177,92 @@ app.post('/api/enhance', upload.single('audio'), async (req, res) => {
         return res.json({ success: true, editId });
 
     } catch (err) {
-        console.error('[VC] /api/enhance hatası:', err.message);
+        console.error('[VC] /api/enhance error:', err.message);
         return res.status(500).json({ error: 'PROCESSING_ERROR', message: err.message });
     } finally {
         if (filePath && fs.existsSync(filePath)) {
             try { 
                 fs.unlinkSync(filePath); 
-                console.log('[VC] Geçici dosya silindi.');
+                console.log('[VC] Temporary file deleted.');
             } catch (e) { 
-                console.error('[VC] Geçici dosya silme hatası:', e); 
+                console.error('[VC] Error deleting temporary file:', e); 
             }
         }
     }
 });
 
 // =========================================================================
-// ENDPOINT: İşlem Durumu   GET /api/status/:editId
+// ENDPOINT: Process Status   GET /api/status/:editId
 //
-// Frontend polling bu endpoint'i kullanır.
-// CleanVoice durumu AUPHONIC aşamasına geçene kadar proxy'lenir.
-// Auphonic tamamlandığında { status: 'DONE', downloadUrl } döner.
+// Frontend polling uses this endpoint.
+// CleanVoice status is proxied until it transitions to the AUPHONIC phase.
+// Returns { status: 'DONE', downloadUrl } when Auphonic is completed.
 // =========================================================================
 app.get('/api/status/:editId', async (req, res) => {
     try {
         const { editId } = req.params;
         const chain = chains[editId];
 
-        // Zincir henüz başlatılmamış
+        // Chain not started yet
         if (!chain) {
-            // CleanVoice'u doğrudan sorgula
+            // Query CleanVoice directly
             const r = await fetch(`${CLEANVOICE_BASE_URL}/edits/${editId}`, {
                 headers: { 'X-API-Key': CLEANVOICE_API_KEY },
             });
             if (!r.ok) {
-                if (r.status === 401) throw new Error("API Anahtarı Geçersiz (401)");
-                if (r.status === 429) throw new Error("Limit Bitti (429)");
+                if (r.status === 401) throw new Error("Invalid API Key (401)");
+                if (r.status === 429) throw new Error("Limit Exceeded (429)");
                 throw new Error(`CleanVoice status: ${r.status}`);
             }
             return res.json(await r.json());
         }
 
-        // Auphonic masterin'g sürüyor
+        // Auphonic mastering is ongoing
         if (chain.phase === 'AUPHONIC_MASTERING') {
             return res.json({ status: 'AUPHONIC_MASTERING', auphonicUuid: chain.auphonicUuid });
         }
 
-        // Tüm zincir bitti
+        // Entire chain finished
         if (chain.phase === 'DONE') {
             return res.json({ status: 'DONE', downloadUrl: chain.finalUrl });
         }
 
-        // Hata
+        // Error
         if (chain.phase === 'FAILURE') {
             return res.json({ status: 'FAILURE', error: chain.error });
         }
 
-        // Hâlâ CleanVoice aşamasında — doğrudan proxy
+        // Still in CleanVoice phase — direct proxy
         const r = await fetch(`${CLEANVOICE_BASE_URL}/edits/${editId}`, {
             headers: { 'X-API-Key': CLEANVOICE_API_KEY },
         });
         if (!r.ok) {
-            if (r.status === 401) throw new Error("API Anahtarı Geçersiz (401)");
-            if (r.status === 429) throw new Error("Limit Bitti (429)");
+            if (r.status === 401) throw new Error("Invalid API Key (401)");
+            if (r.status === 429) throw new Error("Limit Exceeded (429)");
             throw new Error(`CleanVoice status: ${r.status}`);
         }
         return res.json(await r.json());
 
     } catch (err) {
-        console.error('[VC] /api/status hatası:', err.message);
+        console.error('[VC] /api/status error:', err.message);
         return res.status(500).json({ error: err.message });
     }
 });
 
 // =========================================================================
-// ENDPOINT: Proxy İndirme   GET /api/download?url=...
+// ENDPOINT: Proxy Download   GET /api/download?url=...
 // =========================================================================
 app.get('/api/download', async (req, res) => {
     try {
         const { url } = req.query;
-        if (!url) return res.status(400).json({ error: 'URL parametresi gerekli.' });
+        if (!url) return res.status(400).json({ error: 'URL parameter required.' });
 
-        console.log(`[VC] Proxy indirme: ${url.substring(0, 80)}...`);
+        console.log(`[VC] Proxy download: ${url.substring(0, 80)}...`);
 
         const extraHeaders = {};
         if (url.includes('auphonic.com')) {
             extraHeaders['Authorization'] = auphonicAuth();
-            console.log('[VC] Auphonic auth eklendi.');
+            console.log('[VC] Auphonic auth added.');
         }
 
         const { buffer, contentType } = await downloadWithRedirects(url, extraHeaders);
@@ -270,7 +270,7 @@ app.get('/api/download', async (req, res) => {
         const rawName  = url.split('?')[0].split('/').pop() || 'enhanced_audio.wav';
         const fileName = decodeURIComponent(rawName);
 
-        console.log(`[VC] ✅ İndirme tamamlandı: ${fileName} (${(buffer.length/1024/1024).toFixed(1)} MB)`);
+        console.log(`[VC] ✅ Download completed: ${fileName} (${(buffer.length/1024/1024).toFixed(1)} MB)`);
 
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
@@ -279,13 +279,13 @@ app.get('/api/download', async (req, res) => {
         res.send(buffer);
 
     } catch (err) {
-        console.error('[VC] /api/download hatası:', err.message);
+        console.error('[VC] /api/download error:', err.message);
         return res.status(500).json({ error: err.message });
     }
 });
 
 // =========================================================================
-// ENDPOINT: API Kontrol   GET /api/check-key
+// ENDPOINT: API Check   GET /api/check-key
 // =========================================================================
 app.get('/api/check-key', (_req, res) => {
     res.json({
@@ -296,10 +296,10 @@ app.get('/api/check-key', (_req, res) => {
 });
 
 // =========================================================================
-// ANA ZİNCİR: CleanVoice → Auphonic (arka planda asenkron)
+// MAIN CHAIN: CleanVoice → Auphonic (background async)
 // =========================================================================
 async function runChain(editId) {
-    // ── CleanVoice tamamlanana kadar bekle ────────────────────────────
+    // ── Wait until CleanVoice completes ────────────────────────────
     const cvData = await pollCleanvoice(editId);
 
     const cvUrl =
@@ -309,50 +309,50 @@ async function runChain(editId) {
         cvData.output?.download_url   ||
         null;
 
-    if (!cvUrl) throw new Error('CleanVoice download_url bulunamadı: ' + JSON.stringify(cvData));
-    console.log(`[VC] ✅ CleanVoice tamamlandı.`);
+    if (!cvUrl) throw new Error('CleanVoice download_url not found: ' + JSON.stringify(cvData));
+    console.log(`[VC] ✅ CleanVoice completed.`);
 
-    // ── Auphonic aşamasına geç ────────────────────────────────────────
+    // ── Transition to Auphonic phase ────────────────────────────────────────
     chains[editId].phase = 'AUPHONIC_MASTERING';
 
     const prod = await createAuphonicProduction(cvUrl);
     chains[editId].auphonicUuid = prod.uuid;
-    console.log(`[Auphonic] Production başlatıldı: ${prod.uuid}`);
+    console.log(`[Auphonic] Production started: ${prod.uuid}`);
 
     const finalData = await pollAuphonic(prod.uuid);
 
     // ─────────────────────────────────────────────────────────────────
-    // Auphonic output_files içindeki download URL'ini bul
-    // Alan adı API versiyonuna göre farklı gelebilir:
+    // Find download URL in Auphonic output_files
+    // The domain name may differ depending on the API version:
     //   "download_url" | "download" | "url"
     // ─────────────────────────────────────────────────────────────────
     const outFile  = (finalData.output_files || [])[0];
     const finalUrl = outFile?.download_url || outFile?.download || outFile?.url || null;
 
     if (!finalUrl) {
-        throw new Error('Auphonic output URL bulunamadı: ' + JSON.stringify(finalData.output_files));
+        throw new Error('Auphonic output URL not found: ' + JSON.stringify(finalData.output_files));
     }
 
     chains[editId].phase    = 'DONE';
     chains[editId].finalUrl = finalUrl;
-    console.log(`[VC] ✨ Pipeline tamamlandı: ${finalUrl.substring(0, 80)}...`);
+    console.log(`[VC] ✨ Pipeline completed: ${finalUrl.substring(0, 80)}...`);
 }
 
 // =========================================================================
 // CleanVoice Polling
 // =========================================================================
 async function pollCleanvoice(editId, maxAttempts = 120) {
-    console.log('[VC] CleanVoice polling başlıyor...');
-    await sleep(5000); // İlk 5 sn bekleme
+    console.log('[VC] CleanVoice polling started...');
+    await sleep(5000); // Wait first 5 secs
 
     for (let i = 1; i <= maxAttempts; i++) {
         const r = await fetch(`${CLEANVOICE_BASE_URL}/edits/${editId}`, {
             headers: { 'X-API-Key': CLEANVOICE_API_KEY },
         });
         if (!r.ok) {
-            if (r.status === 401) throw new Error("API Anahtarı Geçersiz (401)");
-            if (r.status === 429) console.warn(`[VC] Polling hatası #${i}: Limit Bitti (429)`);
-            else console.warn(`[VC] Polling hatası #${i}: ${r.status}`);
+            if (r.status === 401) throw new Error("Invalid API Key (401)");
+            if (r.status === 429) console.warn(`[VC] Polling error #${i}: Limit Exceeded (429)`);
+            else console.warn(`[VC] Polling error #${i}: ${r.status}`);
             await sleep(5000);
             continue;
         }
@@ -363,50 +363,50 @@ async function pollCleanvoice(editId, maxAttempts = 120) {
 
         if (status === 'SUCCESS') return data;
         if (status === 'FAILURE' || status === 'FAILED') {
-            throw new Error('CleanVoice başarısız: ' + JSON.stringify(data));
+            throw new Error('CleanVoice failed: ' + JSON.stringify(data));
         }
 
         await sleep(5000);
     }
-    throw new Error(`CleanVoice zaman aşımı (${maxAttempts} deneme).`);
+    throw new Error(`CleanVoice timed out (${maxAttempts} attempts).`);
 }
 
 // =========================================================================
-// Auphonic Production Oluştur + Başlat
+// Auphonic Create + Start Production
 //
-// ⚠️ Önemli: Auphonic'e presigned S3/R2 URL geçmek güvenilir değil.
-//    Güvenilir yol: Dosyayı önce kendi sunucumuza indir, Auphonic'e file upload yap.
+// ⚠️ Important: Passing presigned S3/R2 URL to Auphonic is not reliable.
+//    Reliable way: Download the file to our server first, then upload to Auphonic.
 //
-// 🎯 Auphonic'in rolü: Ham sesi al, "parlat" ve stüdyo tonuna getir.
+// 🎯 Auphonic's role: Take the raw audio, "polish" it, and bring it to studio tone.
 //
 //   ❌ denoise → KAPALI  (CleanVoice zaten temizledi; çift geçiş = artifact compounding)
 //   ❌ gate    → KAPALI  (Sessizlik kapısı pump/sıkışma efekti yarattı)
 //   ✅ filtering          → 3–8 kHz EQ kurtarma — CleanVoice'un sildiği tizleri geri verir
-//   ✅ normloudness        → -16 LUFS broadcast standardı (clipping olmaz)
+//   ✅ normloudness        → -16 LUFS broadcast standard (no clipping)
 //   ✅ deess              → Sibilans kontrolü — doğal ses
 //   ✅ leveler            → Adaptif vokal seviyeleme
 // =========================================================================
 async function createAuphonicProduction(cleanvoiceUrl) {
-    // ── ADIM A: Dosyayı CleanVoice'tan kendi sunucumuza indir ─────────
-    console.log('[Auphonic] CleanVoice çıktısı indiriliyor...');
+    // ── STEP A: Download file from CleanVoice to our server ─────────
+    console.log('[Auphonic] Downloading CleanVoice output...');
     const { buffer: audioBuffer } = await downloadWithRedirects(cleanvoiceUrl);
-    console.log(`[Auphonic] İndirildi: ${(audioBuffer.length / 1024 / 1024).toFixed(1)} MB`);
+    console.log(`[Auphonic] Downloaded: ${(audioBuffer.length / 1024 / 1024).toFixed(1)} MB`);
 
-    // ── ADIM B: Production oluştur (input_file YOK — file upload gelecek) ──
-    console.log('[Auphonic] Production oluşturuluyor...');
+    // ── STEP B: Create production (NO input_file — file upload will come next) ──
+    console.log('[Auphonic] Creating production...');
     const createRes = await fetch(`${AUPHONIC_BASE_URL}/productions.json`, {
         method:  'POST',
         headers: { 'Authorization': auphonicAuth(), 'Content-Type': 'application/json' },
         body:    JSON.stringify({
             algorithms: {
-                denoise:         false,  // ❌ KAPALI — artifact compounding önlemi
-                gate:            false,  // ❌ KAPALI — pump/sıkışma önlemi
-                filtering:       true,   // ✅ 3–8 kHz EQ kurtarma + frekans dengeleme
-                highpass_filter: true,   // ✅ Düşük frekans rumble/rüzgar temizleme (%75 sub-bass)
-                normloudness:    true,   // ✅ Loudness normalizasyonu
-                loudnesstarget:  -16,    // -16 LUFS broadcast standardı (clipping olmaz)
-                deess:           true,   // ✅ Sibilans kontrolü
-                leveler:         true,   // ✅ Adaptif vokal seviyeleme
+                denoise:         false,  // ❌ OFF — prevents artifact compounding
+                gate:            false,  // ❌ OFF — prevents pump/squash effect
+                filtering:       true,   // ✅ 3–8 kHz EQ recovery + frequency balancing
+                highpass_filter: true,   // ✅ Low frequency rumble/wind cleaning (75% sub-bass)
+                normloudness:    true,   // ✅ Loudness normalization
+                loudnesstarget:  -16,    // -16 LUFS broadcast standard (no clipping)
+                deess:           true,   // ✅ Sibilance control
+                leveler:         true,   // ✅ Adaptive vocal leveling
             },
             output_files: [{ format: 'wav' }],
         }),
@@ -416,10 +416,10 @@ async function createAuphonicProduction(cleanvoiceUrl) {
     }
     const createData = await createRes.json();
     const uuid       = createData.data.uuid;
-    console.log(`[Auphonic] Production oluşturuldu: ${uuid}`);
+    console.log(`[Auphonic] Production created: ${uuid}`);
 
-    // ── ADIM C: Dosyayı production'a upload et (URL yerine binary upload) ──
-    console.log('[Auphonic] Dosya yükleniyor (file upload)...');
+    // ── STEP C: Upload file to production (binary upload instead of URL) ──
+    console.log('[Auphonic] Uploading file (file upload)...');
     const formData = new FormData();
     formData.append(
         'input_file',
@@ -434,9 +434,9 @@ async function createAuphonicProduction(cleanvoiceUrl) {
     if (!uploadRes.ok) {
         throw new Error(`Auphonic upload: ${uploadRes.status} — ${await uploadRes.text()}`);
     }
-    console.log('[Auphonic] Dosya yüklendi.');
+    console.log('[Auphonic] File uploaded.');
 
-    // ── ADIM D: Production'ı başlat ────────────────────────────────────
+    // ── STEP D: Start production ────────────────────────────────────
     const startRes = await fetch(`${AUPHONIC_BASE_URL}/production/${uuid}/start.json`, {
         method:  'POST',
         headers: { 'Authorization': auphonicAuth() },
@@ -444,7 +444,7 @@ async function createAuphonicProduction(cleanvoiceUrl) {
     if (!startRes.ok) {
         throw new Error(`Auphonic start: ${startRes.status} — ${await startRes.text()}`);
     }
-    console.log(`[Auphonic] ✅ Production başlatıldı: ${uuid}`);
+    console.log(`[Auphonic] ✅ Production started: ${uuid}`);
     return createData.data;
 }
 
@@ -452,8 +452,8 @@ async function createAuphonicProduction(cleanvoiceUrl) {
 // Auphonic Polling
 // =========================================================================
 async function pollAuphonic(uuid, maxAttempts = 72) {
-    // 72 × 5 sn = 6 dakika maksimum
-    console.log(`[Auphonic] Polling başlıyor (UUID: ${uuid})...`);
+    // 72 × 5 sec = 6 minutes max
+    console.log(`[Auphonic] Polling started (UUID: ${uuid})...`);
 
     for (let i = 0; i < maxAttempts; i++) {
         await sleep(5000);
@@ -462,28 +462,28 @@ async function pollAuphonic(uuid, maxAttempts = 72) {
             headers: { 'Authorization': auphonicAuth() },
         });
         if (!r.ok) {
-            console.warn(`[Auphonic] Polling hatası: ${r.status}`);
+            console.warn(`[Auphonic] Polling error: ${r.status}`);
             continue;
         }
 
         const json   = await r.json();
         const data   = json.data;
         const status = data.status_string;
-        console.log(`[Auphonic] Durum #${i + 1}: ${status}`);
+        console.log(`[Auphonic] Status #${i + 1}: ${status}`);
 
         if (status === 'Done')  return data;
-        if (status === 'Error') throw new Error(`Auphonic hatası: ${data.error_message || 'Bilinmeyen hata'}`);
+        if (status === 'Error') throw new Error(`Auphonic error: ${data.error_message || 'Unknown error'}`);
     }
-    throw new Error('Auphonic zaman aşımına uğradı.');
+    throw new Error('Auphonic timed out.');
 }
 
 // =========================================================================
-// YARDIMCI: Native https ile redirect takipli indirme
-// (built-in fetch SSL/redirect sorunlarını önlemek için)
+// HELPERS: Native https ile redirect takipli indirme
+// (to prevent built-in fetch SSL/redirect issues)
 // =========================================================================
 function downloadWithRedirects(targetUrl, extraHeaders = {}, maxRedirects = 5) {
     return new Promise((resolve, reject) => {
-        if (maxRedirects < 0) return reject(new Error('Çok fazla redirect.'));
+        if (maxRedirects < 0) return reject(new Error('Too many redirects.'));
 
         const parsed = new URL(targetUrl);
         const lib    = parsed.protocol === 'https:' ? https : http;
@@ -520,49 +520,49 @@ function downloadWithRedirects(targetUrl, extraHeaders = {}, maxRedirects = 5) {
 }
 
 // =========================================================================
-// CleanVoice Konfigürasyonu — "Altın Oran" Prensibi
+// CleanVoice Configuration — "Golden Ratio" Principle
 //
-// 🎯 Rol: Sadece ham gürültü arındırma. Parlatma/EQ → Auphonic yapacak.
+// 🎯 Role: Only raw noise reduction. Polishing/EQ → Auphonic will handle.
 //
-// ❌ studio_sound → TÜM MODLARDA YOK
-//    Robotikliğin ana kaynağı. Yapay "stüdyo parlatma" sesi bozuyor.
-//    Frekans restaurasyonu Auphonic filtering tarafından yapılacak.
+// ❌ studio_sound → OFF IN ALL MODES
+//    The main source of robotic sound. Artificial "studio polishing" ruins the audio.
+//    Frequency restoration will be handled by Auphonic filtering.
 //
-// ❌ normalize → TÜM MODLARDA KAPALI (normalize: false)
-//    Ses seviyesi işini sadece Auphonic yapsın (normloudness: -16 LUFS).
-//    Çift normalizasyon sesin dinamiğini bozar.
+// ❌ normalize → OFF IN ALL MODES (normalize: false)
+//    Let Auphonic handle volume leveling solely (normloudness: -16 LUFS).
+//    Double normalization destroys the audio dynamics.
 //
-// ❌ fillers, stutters, long_silences → YOK (fiziksel kesim yapar)
+// ❌ fillers, stutters, long_silences → OFF (they perform physical cuts)
 // =========================================================================
 function buildCleanvoiceConfig(intensity) {
     if (intensity === 'hafif') {
-        // Mutlak minimum — sadece ham gürültü temizleme
-        // Normalizasyon ve EQ tamamen Auphonic'e bırakıldı
+        // Absolute minimum — raw noise reduction only
+        // Normalization and EQ completely delegated to Auphonic
         return {
             remove_noise:  true,
-            normalize:     false,  // Auphonic yapacak — çift işlem istemiyoruz
+            normalize:     false,  // Auphonic will handle it — we don't want double processing
             export_format: 'wav',
         };
     }
 
     if (intensity === 'orta') {
-        // Ham temizleme + nefes — studio_sound kesinlikle yok
+        // Raw cleaning + breath — absolutely no studio_sound
         // noise_reduction: 0.7 → o son rüzgar pürüzünü robotiklik yaratmadan yakalar
         return {
             remove_noise:    true,
-            normalize:       false,  // Auphonic yapacak
-            noise_reduction: 0.7,   // ⚠️ Deneysel — 0.5'ten artırıldı (rüzgar artığı)
+            normalize:       false,  // Auphonic will handle
+            noise_reduction: 0.7,   // ⚠️ Experimental — increased from 0.5 (residual wind)
             breath:          true,
             export_format:   'wav',
         };
     }
 
-    // agresif — studio_sound YOK, remove_noise + ağız/nefes temizleme
-    // Tüm frekans şekillendirme ve parlatma Auphonic'te
+    // aggressive — NO studio_sound, remove_noise + mouth/breath cleaning
+    // All frequency shaping and polishing in Auphonic
     return {
         remove_noise:    true,
-        normalize:       false,  // Auphonic yapacak
-        noise_reduction: 0.7,   // ⚠️ Deneysel — robotiklik sınırın altında, rüzgar üzerinde
+        normalize:       false,  // Auphonic will handle
+        noise_reduction: 0.7,   // ⚠️ Experimental — below robotic limit, above wind
         breath:          true,
         mouth_sounds:    true,
         export_format:   'wav',
@@ -572,36 +572,36 @@ function buildCleanvoiceConfig(intensity) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // =========================================================================
-// SERVER BAŞLAT
+// START SERVER
 // =========================================================================
 const server = app.listen(PORT, () => {
     const cvOk  = !!(CLEANVOICE_API_KEY && CLEANVOICE_API_KEY !== 'your_cleanvoice_api_key_here');
     const auOk  = !!(AUPHONIC_USER && AUPHONIC_PASS);
 
-    console.log(`\n[SYSTEM] Server Başlatılıyor...`);
+    console.log(`\n[SYSTEM] Starting Server...`);
     if (cvOk) {
-        console.log(`[SYSTEM] CleanVoice API Anahtarı Aktif: "${CLEANVOICE_API_KEY.substring(0, 4)}..." (Uzunluk: ${CLEANVOICE_API_KEY.length})`);
+        console.log(`[SYSTEM] CleanVoice API Key Active: "${CLEANVOICE_API_KEY.substring(0, 4)}..." (Length: ${CLEANVOICE_API_KEY.length})`);
     } else {
-        console.log(`[SYSTEM] DİKKAT: CleanVoice API Anahtarı EKSİK veya GEÇERSİZ!`);
+        console.log(`[SYSTEM] ATTENTION: CleanVoice API Key is MISSING or INVALID!`);
     }
 
     console.log('');
     console.log('  ╔══════════════════════════════════════════════════╗');
     console.log('  ║                                                  ║');
-    console.log('  ║   🎤 VocalCleaner — AI Ses İyileştirme Stüdyosu  ║');
+    console.log('  ║   🎤 VocalCleaner — AI Audio Enhancement Studio  ║');
     console.log('  ║                                                  ║');
     console.log(`  ║   🌐 http://localhost:${PORT}                      ║`);
     console.log('  ║                                                  ║');
-    console.log(`  ║   🔑 CleanVoice : ${cvOk ? '✅ Yapılandırılmış        ' : '❌ Eksik (.env kontrol et)'}║`);
-    console.log(`  ║   🎚  Auphonic  : ${auOk ? '✅ Yapılandırılmış        ' : '❌ Eksik (.env kontrol et)'}║`);
+    console.log(`  ║   🔑 CleanVoice : ${cvOk ? '✅ Configured             ' : '❌ Missing (check .env)   '}║`);
+    console.log(`  ║   🎚  Auphonic  : ${auOk ? '✅ Configured             ' : '❌ Missing (check .env)   '}║`);
     console.log('  ║                                                  ║');
-    console.log('  ║   Pipeline: CleanVoice → Auphonic (cerrahi)     ║');
-    console.log('  ║   Devre Dışı: denoise · gate · fillers ·         ║');
+    console.log('  ║   Pipeline: CleanVoice → Auphonic (surgical)     ║');
+    console.log('  ║   Disabled: denoise · gate · fillers ·         ║');
     console.log('  ║              stutters · long_silences            ║');
     console.log('  ║                                                  ║');
     console.log('  ╚══════════════════════════════════════════════════╝');
     console.log('');
 });
 
-// Büyük dosyalar için sunucu zaman aşımını artır (30 dakika)
+// Increase server timeout for large files (30 minutes)
 server.timeout = 1800000;

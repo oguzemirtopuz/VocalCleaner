@@ -1,33 +1,33 @@
 const fs = require('fs');
 const path = require('path');
 
-// Hedef klasör
+// Target directory
 const distDir = path.join(__dirname, 'dist');
 
-// Klasörü oluştur (varsa siler/temizlemez, sadece oluşturur)
+// Create directory (if it exists, it doesn't clean/delete, just creates)
 if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir);
-    console.log('[Build] dist klasörü oluşturuldu.');
+    console.log('[Build] dist directory created.');
 }
 
-// Kopyalanacak dosyalar
+// Files to copy
 const filesToCopy = [
     'index.html',
     'style.css',
     'app.js'
 ];
 
-// Dosyaları kopyala
+// Copy files
 filesToCopy.forEach(file => {
     const src = path.join(__dirname, file);
     const dest = path.join(distDir, file);
     
     if (fs.existsSync(src)) {
         fs.copyFileSync(src, dest);
-        console.log(`[Build] ${file} -> dist/${file} kopyalandı.`);
+        console.log(`[Build] ${file} -> dist/${file} copied.`);
     } else {
-        console.warn(`[Build] Uyarı: ${file} bulunamadı!`);
+        console.warn(`[Build] Warning: ${file} not found!`);
     }
 });
 
-console.log('[Build] Tamamlandı! Proje Render.com için hazır.');
+console.log('[Build] Completed! Project is ready for Render.com.');

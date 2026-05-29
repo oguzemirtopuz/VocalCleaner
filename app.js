@@ -1,29 +1,29 @@
 /**
  * ============================================
- * VocalCleaner — AI Ses İyileştirme Stüdyosu
- * Ana Uygulama JavaScript Dosyası
+ * VocalCleaner — AI Audio Enhancement Studio
+ * Main Application JavaScript File
  * ============================================
  * 
- * Bu dosya uygulamanın tüm frontend mantığını içerir.
- * Gerçek ses işleme için Node.js proxy sunucusu (server.js) kullanılır.
+ * This file contains all the frontend logic of the application.
+ * For actual audio processing, the Node.js proxy server (server.js) is used.
  * 
- * Kurulum:
- *   1. .env dosyasında CLEANVOICE_API_KEY değişkenini tanımlayın.
- *   2. "npm start" ile sunucuyu başlatın.
- *   3. Uygulamaya http://localhost:3456 adresinden erişin.
+ * Setup:
+ *   1. Define the CLEANVOICE_API_KEY variable in the .env file.
+ *   2. Start the server with "npm start".
+ *   3. Access the application at http://localhost:3456.
  */
 
 // ===== GLOBAL STATE =====
 const AppState = {
-    currentFile: null,           // Yüklenen dosya objesi
-    originalAudioUrl: null,      // Orijinal ses URL'i
-    enhancedAudioUrl: null,      // İyileştirilmiş ses URL'i
+    currentFile: null,           // Uploaded file object
+    originalAudioUrl: null,      // Original audio URL
+    enhancedAudioUrl: null,      // Enhanced audio URL
     audioContext: null,          // Web Audio API context
-    originalBuffer: null,        // Orijinal ses buffer
-    enhancedBuffer: null,        // İyileştirilmiş ses buffer
-    currentMode: 'original',     // 'original' veya 'enhanced'
+    originalBuffer: null,        // Original audio buffer
+    enhancedBuffer: null,        // Enhanced audio buffer
+    currentMode: 'original',     // 'original' or 'enhanced'
     isPlaying: false,
-    currentAudio: null,          // Aktif HTMLAudioElement
+    currentAudio: null,          // Active HTMLAudioElement
     originalAudio: null,
     enhancedAudio: null,
     selectedIntensity: 'orta',    // 'hafif', 'orta', 'agresif'
@@ -101,14 +101,14 @@ document.addEventListener('DOMContentLoaded', () => {
     bindEvents();
 });
 
-/** Lucide ikonlarını aktifleştir */
+/** Activate Lucide icons */
 function initLucideIcons() {
     if (window.lucide) {
         lucide.createIcons();
     }
 }
 
-/** Arka plan parçacıkları oluştur */
+/** Create background particles */
 function initParticles() {
     const container = DOM.bgParticles;
     const colors = ['rgba(139, 92, 246, 0.3)', 'rgba(6, 214, 160, 0.2)', 'rgba(236, 72, 153, 0.15)'];
@@ -134,7 +134,7 @@ function initParticles() {
     }
 }
 
-/** İşleme animasyonu için bar'lar oluştur */
+/** Create bars for processing animation */
 function initVisualizerBars() {
     const container = DOM.visualizerBars;
     for (let i = 0; i < 40; i++) {
@@ -147,7 +147,7 @@ function initVisualizerBars() {
     }
 }
 
-/** SVG gradient tanımı ekle (ring-progress için) */
+/** Add SVG gradient definition (for ring-progress) */
 function addSVGGradient() {
     const svg = document.querySelector('.ring-svg');
     if (!svg) return;
@@ -245,7 +245,7 @@ function bindEvents() {
 
 // ===== FILE HANDLING =====
 
-/** Dosya seçimi işleyicisi */
+/** File selection handler */
 function handleFileSelect(e) {
     const file = e.target.files[0];
     if (file) {
@@ -253,47 +253,47 @@ function handleFileSelect(e) {
     }
 }
 
-/** Dosya işleme ve doğrulama */
+/** File processing and validation */
 function processFile(file) {
-    // Format kontrolü
+    // Format check
     const validTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3'];
     const ext = file.name.split('.').pop().toLowerCase();
 
     if (!validTypes.includes(file.type) && !['mp3', 'wav'].includes(ext)) {
-        showToast('Lütfen MP3 veya WAV formatında bir dosya seçin.', 'error');
+        showToast('Please select an MP3 or WAV format file.', 'error');
         return;
     }
 
-    // Boyut kontrolü (500MB)
+    // Size check (500MB)
     const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
-        showToast('Dosya boyutu 500MB sınırını aşıyor.', 'error');
+        showToast('The file size exceeds the 500MB limit.', 'error');
         return;
     }
 
     AppState.currentFile = file;
     AppState.originalAudioUrl = URL.createObjectURL(file);
 
-    // UI güncelle
+    // Update UI
     DOM.fileName.textContent = file.name;
     DOM.fileSize.textContent = `${formatFileSize(file.size)} • ${ext.toUpperCase()}`;
 
     DOM.uploadZone.classList.add('hidden');
     DOM.fileInfoCard.classList.add('visible');
 
-    // Waveform çiz
+    // Draw waveform
     drawUploadWaveform(file);
 
-    showToast(`"${file.name}" başarıyla yüklendi.`, 'success');
+    showToast(`"${file.name}" successfully uploaded.`, 'success');
 }
 
-/** Dosyayı kaldır */
+/** Remove file */
 function handleFileRemove(e) {
     e.stopPropagation();
     resetUpload();
 }
 
-/** Upload alanını sıfırla */
+/** Reset upload area */
 function resetUpload() {
     if (AppState.originalAudioUrl) {
         URL.revokeObjectURL(AppState.originalAudioUrl);
@@ -315,7 +315,7 @@ function resetUpload() {
 
 // ===== WAVEFORM DRAWING =====
 
-/** Yükleme waveform'u çiz */
+/** Draw upload waveform */
 async function drawUploadWaveform(file) {
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -325,11 +325,11 @@ async function drawUploadWaveform(file) {
         drawWaveform(DOM.waveformCanvas, audioBuffer, '#8b5cf6', '#a78bfa');
         audioContext.close();
     } catch (err) {
-        console.warn('Waveform çizimi başarısız:', err);
+        console.warn('Draw waveformimi başarısız:', err);
     }
 }
 
-/** Canvas üzerine waveform çiz */
+/** Draw waveform on Canvas */
 function drawWaveform(canvas, audioBuffer, colorStart, colorEnd) {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
@@ -370,7 +370,7 @@ function drawWaveform(canvas, audioBuffer, colorStart, colorEnd) {
     }
 }
 
-/** Player waveform çiz */
+/** Draw player waveform */
 function drawPlayerWaveform(audioBuffer, mode) {
     const colors = mode === 'enhanced'
         ? ['#06d6a0', '#34e8b8']
@@ -380,36 +380,36 @@ function drawPlayerWaveform(audioBuffer, mode) {
 
 // ===== API INTEGRATION =====
 // =========================================================================
-// 🔑 CLEANVOICE AI API ENTEGRASYONU
+// 🔑 CLEANVOICE AI API INTEGRATION
 // =========================================================================
-// Bu bölüm, Node.js tabanlı proxy sunucumuz üzerinden (server.js)
-// Cleanvoice AI API'sine bağlanır.
+// This section connects to the Cleanvoice AI API via our Node.js-based proxy server (server.js).
+// 
 //
-// Proxy kullanılmasının nedeni, API anahtarını güvenli tutmak (expose etmemek)
-// ve CORS sorunlarını aşmaktır.
+// The reason for using a proxy is to keep the API key secure (not expose it)
+// and to bypass CORS issues.
 // =========================================================================
 
 /**
- * Gerçek API ile ses iyileştirme
+ * Audio enhancement with the real API
  * 
- * Bu fonksiyon, ses dosyasını Node.js backend'ine (proxy) gönderir.
- * Backend; Cleanvoice API'ye yükler, işler ve download_url döndürür.
+ * This function sends the audio file to the Node.js backend (proxy).
+ * The backend uploads to the Cleanvoice API, processes it, and returns a download_url.
  * 
- * @param {File} audioFile - İyileştirilecek ses dosyası
- * @param {string} intensity - İyileştirme şiddeti
- * @param {Function} onProgress - Yükleme ilerlemesini takip etmek için callback
- * @returns {Promise<string>} İyileştirilmiş sesin URL'i (editId dönüyor)
+ * @param {File} audioFile - The audio file to be enhanced
+ * @param {string} intensity - The enhancement intensity
+ * @param {Function} onProgress - Callback to track upload progress
+ * @returns {Promise<string>} URL of the enhanced audio (returns editId)
  */
 function enhanceAudioWithAPI(audioFile, intensity, onProgress) {
     return new Promise((resolve, reject) => {
         const formData = new FormData();
-        formData.append('intensity', intensity); // Metin alanı dosyadan önce olmalı
+        formData.append('intensity', intensity); // Text field must be before file
         formData.append('audio', audioFile);
 
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/enhance', true);
 
-        // Yükleme ilerlemesi (upload progress)
+        // Upload progress
         xhr.upload.onprogress = function(event) {
             if (event.lengthComputable) {
                 const percentComplete = (event.loaded / event.total) * 100;
@@ -423,10 +423,10 @@ function enhanceAudioWithAPI(audioFile, intensity, onProgress) {
                     const data = JSON.parse(xhr.responseText);
                     resolve(data.editId);
                 } catch (e) {
-                    reject(new Error('Sunucu geçersiz yanıt döndürdü.'));
+                    reject(new Error('The server returned an invalid response.'));
                 }
             } else {
-                let errorMsg = `Backend Hatası: ${xhr.status}`;
+                let errorMsg = `Backend Error: ${xhr.status}`;
                 try {
                     const errorData = JSON.parse(xhr.responseText);
                     errorMsg = errorData.message || errorMsg;
@@ -436,7 +436,7 @@ function enhanceAudioWithAPI(audioFile, intensity, onProgress) {
         };
 
         xhr.onerror = function() {
-            reject(new Error('Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.'));
+            reject(new Error('Could not connect to the server. Please check your internet connection.'));
         };
 
         xhr.send(formData);
@@ -444,7 +444,7 @@ function enhanceAudioWithAPI(audioFile, intensity, onProgress) {
 }
 
 /**
- * Cleanvoice'dan dönen status değerini UI adımlarına eşler
+ * Maps the status value returned from Cleanvoice to UI steps
  * @param {string} status - Cleanvoice status (PENDING, PREPROCESSING, CLASSIFICATION, EDITING, POSTPROCESSING, EXPORT, SUCCESS)
  * @returns {number} Step index (0-4)
  */
@@ -456,7 +456,7 @@ function mapStatusToStep(status) {
         'EDITING': 2,
         'POSTPROCESSING': 3,
         'EXPORT': 3,
-        'AUPHONIC_MASTERING': 4,  // Auphonic devrede
+        'AUPHONIC_MASTERING': 4,  // Auphonic engaged
         'DONE': 4,
         'SUCCESS': 4
     };
@@ -465,35 +465,35 @@ function mapStatusToStep(status) {
 
 // ===== ENHANCE PROCESS =====
 
-/** Enhance butonuna basıldığında çalışır */
+/** Runs when the Enhance button is clicked */
 async function handleEnhance() {
     if (!AppState.currentFile) {
-        showToast('Lütfen önce bir dosya yükleyin.', 'error');
+        showToast('Please upload a file first.', 'error');
         return;
     }
 
-    // UI geçişi: Upload → Processing
+    // UI transition: Upload → Processing
     DOM.heroSection.classList.add('hidden');
     DOM.uploadSection.classList.add('hidden');
     DOM.processingSection.classList.add('visible');
     DOM.resultSection.classList.remove('visible');
 
-    // Navigasyon güncelle
+    // Update navigation
     document.querySelector('.nav-link[data-section="studio"]')?.classList.add('active');
     document.querySelector('.nav-link[data-section="upload"]')?.classList.remove('active');
 
     try {
-        // İşleme animasyonunu başlat ve API çağrısını yürüt
+        // Start processing animation and execute API call
         const enhancedUrl = await runProcessingAnimation(AppState.currentFile, AppState.selectedIntensity);
 
         AppState.enhancedAudioUrl = enhancedUrl;
 
-        // İşlem tamamlandı — sonuç ekranına geç
+        // Process completed — switch to result screen
         showResultSection();
-        showToast('Ses başarıyla iyileştirildi!', 'success');
+        showToast('Audio successfully enhanced!', 'success');
 
     } catch (error) {
-        console.error('İyileştirme hatası:', error);
+        console.error('Enhancement error:', error);
 
         const msg = error.message || '';
         let userMsg = '';
@@ -501,18 +501,18 @@ async function handleEnhance() {
         if (msg.includes('402') || msg.includes('quota') || msg.includes('credit') || msg.includes('limit') || msg.includes('insufficient')) {
             userMsg = '⚠️ CleanVoice API kredisi bitti. Lütfen yöneticiye bildirin: "CleanVoice API\'si bitmiş."';
         } else if (msg.includes('401') || msg.includes('403') || msg.includes('API_KEY')) {
-            userMsg = '⚠️ API anahtarı geçersiz. Lütfen yöneticiye bildirin: "CleanVoice API anahtarı geçersiz."';
+            userMsg = '⚠️ Invalid API key. Please notify the administrator.';
         } else if (msg.includes('Auphonic')) {
             userMsg = '⚠️ Lütfen yöneticiye bildirin: "Auphonic API\'si bitti veya hatalı."';
         } else if (msg.includes('zaman aşımı') || msg.includes('timeout')) {
-            userMsg = '⏱️ İşlem çok uzun sürdü. Lütfen tekrar deneyin.';
+            userMsg = '⏱️ The process took too long. Please try again.';
         } else {
-            userMsg = `❌ Bir hata oluştu. Lütfen tekrar deneyin. (${msg})`;
+            userMsg = `❌ An error occurred. Please try again. (${msg})`;
         }
 
         showToast(userMsg, 'error');
 
-        // Upload ekranına geri dön
+        // Return to Upload screen
         DOM.processingSection.classList.remove('visible');
         DOM.heroSection.classList.remove('hidden');
         DOM.uploadSection.classList.remove('hidden');
@@ -520,47 +520,47 @@ async function handleEnhance() {
 }
 
 /** 
- * İşleme animasyonunu çalıştır ve API çağrısını senkronize yap
+ * Run the processing animation and synchronize the API call
  */
 async function runProcessingAnimation(file, intensity) {
-    // UI Durum Başlıkları
+    // UI Status Titles
     const stageInfo = [
-        { title: 'Dosya Analiz Ediliyor...', sub: 'Yapay zeka ses profilinizi çıkarıyor' },
-        { title: 'Vokal Temizleniyor...', sub: 'Gürültüler ve gereksiz sesler ayıklanıyor' },
-        { title: 'Ses Dengeleniyor...', sub: 'EQ ve dinamik aralık optimize ediliyor' },
-        { title: 'Vokal Parlatılıyor...', sub: 'Nefes ve ağız sesleri yok ediliyor' },
-        { title: 'Auphonic Mastering...', sub: 'Profesyonel ses imzası ve normalizasyon uygulanıyor' },
-        { title: 'Dosya Hazırlanıyor...', sub: 'İşlenmiş ses tarayıcınıza indiriliyor' },
-        { title: 'İşlem Tamamlandı!', sub: 'Temizlenmiş ses dosyanız hazır' }
+        { title: 'Analyzing File...', sub: 'AI is extracting your audio profile' },
+        { title: 'Cleaning Vocals...', sub: 'Noise and unnecessary sounds are being removed' },
+        { title: 'Balancing Audio...', sub: 'EQ and dynamic range are being optimized' },
+        { title: 'Polishing Vocals...', sub: 'Breath and mouth sounds are being eliminated' },
+        { title: 'Auphonic Mastering...', sub: 'Professional audio signature and normalization applied' },
+        { title: 'Preparing File...', sub: 'Processed audio is being downloaded to your browser' },
+        { title: 'Process Completed!', sub: 'Your cleaned audio file is ready' }
     ];
 
     let currentStep = -1; // -1 means uploading
     let progressPercent = 0;
     let isFinished = false;
 
-    // UI'ı başlangıç durumuna getir (Upload aşaması)
+    // Reset UI to initial state (Upload phase)
     updateRingProgress(0);
     DOM.steps.forEach(s => s.classList.remove('active', 'completed'));
     DOM.steps[0].classList.add('active');
     
-    DOM.processingTitle.textContent = 'Dosya Yükleniyor...';
-    DOM.processingStage.textContent = 'Ses dosyanız güvenli sunucularımıza aktarılıyor (%0)';
+    DOM.processingTitle.textContent = 'Uploading File...';
+    DOM.processingStage.textContent = 'Your audio file is being transferred to our secure servers (0%)';
 
-    // 1. API İşlemini Başlat ve Upload Progress'i Dinle
+    // 1. Start API Process and Listen to Upload Progress
     const editId = await enhanceAudioWithAPI(file, intensity, (percent) => {
-        progressPercent = percent * 0.15; // Yüklemeyi %0 - %15 arası ring'de göster
+        progressPercent = percent * 0.15; // Show upload from 0% to 15% on the ring
         updateRingProgress(progressPercent);
-        DOM.processingStage.textContent = `Ses dosyanız güvenli sunucularımıza aktarılıyor (%${Math.round(percent)})`;
+        DOM.processingStage.textContent = `Your audio file is being transferred to our secure servers (%${Math.round(percent)})`;
     });
     
-    console.log(`[VocalCleaner] İşlem Id: ${editId} — Şiddet: ${intensity} — Polling başlıyor...`);
+    console.log(`[VocalCleaner] Job ID: ${editId} — Intensity: ${intensity} — Polling started...`);
 
-    // Yükleme bitti, ilk analiz aşamasına geçiliyor
+    // Upload finished, transitioning to the first analysis phase
     currentStep = 0;
     DOM.processingTitle.textContent = stageInfo[0].title;
     DOM.processingStage.textContent = stageInfo[0].sub;
 
-    // Polling Döngüsü
+    // Polling Loop
     while (!isFinished) {
         try {
             const response = await fetch(`/api/status/${editId}`);
@@ -572,9 +572,9 @@ async function runProcessingAnimation(file, intensity) {
 
             const stepIdx = mapStatusToStep(currentStatus);
 
-            // UI Güncelle
+            // Update UI
             if (stepIdx > currentStep) {
-                // Önceki adımları tamamlandı yap
+                // Mark previous steps as completed
                 for (let i = 0; i < stepIdx; i++) {
                     DOM.steps[i].classList.remove('active');
                     DOM.steps[i].classList.add('completed');
@@ -586,16 +586,16 @@ async function runProcessingAnimation(file, intensity) {
                 DOM.processingStage.textContent = stageInfo[currentStep].sub;
             }
 
-            // Progress bar yapay ama mantıklı ilerlesin
+            // Advance progress bar artificially but logically
             const targetPercent = (stepIdx + 1) * 20 - 5;
             if (progressPercent < targetPercent) {
                 progressPercent += 0.8;
             } else if (progressPercent < 98) {
-                progressPercent += 0.25; // Daha akıcı ilerleme (donmuş gibi durmasın)
+                progressPercent += 0.25; // Smoother progression (so it doesn't look frozen)
             }
             updateRingProgress(progressPercent);
 
-            // Auphonic mastering sürüyor — bekle, indirme ekranını açma
+            // Auphonic mastering is ongoing — wait, do not open download screen
             if (currentStatus === 'AUPHONIC_MASTERING' || currentStatus === 'SUCCESS') {
                 DOM.processingTitle.textContent = stageInfo[4].title;
                 DOM.processingStage.textContent = stageInfo[4].sub;
@@ -607,14 +607,14 @@ async function runProcessingAnimation(file, intensity) {
                 continue;
             }
 
-            // Tüm pipeline bitti (CleanVoice + Auphonic) — sadece şimdi indirme ekranı
+            // Entire pipeline finished (CleanVoice + Auphonic) — only now show download screen
             if (currentStatus === 'DONE') {
                 isFinished = true;
 
                 const downloadUrl = data.downloadUrl || data.download_url;
-                console.log('[VocalCleaner] ✅ Pipeline tamamlandı. Download URL:', downloadUrl);
+                console.log('[VocalCleaner] ✅ Pipeline completed. Download URL:', downloadUrl);
 
-                if (!downloadUrl) throw new Error('Download URL alınamadı.');
+                if (!downloadUrl) throw new Error('Could not get the Download URL.');
 
                 DOM.steps.forEach(s => s.classList.add('completed'));
                 DOM.processingTitle.textContent = stageInfo[5].title;
@@ -631,30 +631,30 @@ async function runProcessingAnimation(file, intensity) {
             }
 
             if (currentStatus === 'FAILURE' || currentStatus === 'FAILED') {
-                throw new Error('İşlem başarısız oldu.');
+                throw new Error('The process failed.');
             }
 
-            // 1.5 saniye bekle (daha hızlı tepki için 2000'den düşürdük)
+            // Wait 1.5 seconds (reduced from 2000 for faster response)
             await delay(1500);
 
         } catch (err) {
-            console.error('[VocalCleaner] Polling hatası:', err);
+            console.error('[VocalCleaner] Polling error:', err);
             throw err;
         }
     }
 }
 
 /**
- * İşlenmiş sesi proxy üzerinden indirir ve Audio URL döner
- * @param {string} rawUrl - Cleanvoice'dan gelen ham download URL
+ * Downloads the processed audio via proxy and returns the Audio URL
+ * @param {string} rawUrl - Raw download URL from Cleanvoice
  */
 async function downloadEnhancedAudio(rawUrl) {
-    console.log('[Frontend] Temizlenmiş ses indiriliyor...');
+    console.log('[Frontend] Downloading enhanced audio...');
     const proxyUrl = `/api/download?url=${encodeURIComponent(rawUrl)}`;
 
     const response = await fetch(proxyUrl);
     if (!response.ok) {
-        let errMsg = 'Ses dosyası indirilemedi.';
+        let errMsg = 'Audio file could not be downloaded.';
         try {
             const errData = await response.json();
             errMsg += ` (${errData.error || response.status})`;
@@ -667,7 +667,7 @@ async function downloadEnhancedAudio(rawUrl) {
     const audioBlob = await response.blob();
     const arrayBuffer = await audioBlob.arrayBuffer();
 
-    // Waveform çizimi için buffer'ı decode et
+    // Draw waveformimi için buffer'ı decode et
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     AppState.enhancedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
@@ -675,19 +675,19 @@ async function downloadEnhancedAudio(rawUrl) {
 }
 
 /** 
- * Ring progress animasyonu
- * @param {number} startMs - Başlangıç mili-saniyesi (total üzerinden)
- * @param {number} endMs - Bitiş mili-saniyesi (total üzerinden)
- * @param {number} totalMs - Toplam animasyon süresi
- * @param {number} durationMs - Bu aşamanın süresi
- * @param {Function} isApiCompleted - API'nin bitip bitmediğini kontrol eden fonksiyon
+ * Ring progress animation
+ * @param {number} startMs - Start millisecond (over total)
+ * @param {number} endMs - End millisecond (over total)
+ * @param {number} totalMs - Total animation duration
+ * @param {number} durationMs - Duration of this stage
+ * @param {Function} isApiCompleted - Function checking if API is completed
  */
 function animateProgress(startMs, endMs, totalMs, durationMs, isApiCompleted) {
     return new Promise(resolve => {
         let startPercent = (startMs / totalMs) * 100;
         let endPercent = (endMs / totalMs) * 100;
 
-        // Sonlara doğru %100'e vurmasın, son adımı beklesin
+        // Do not reach 100% too quickly, wait for the final step
         if (endPercent > 98 && startPercent < 98) {
             endPercent = 98;
         }
@@ -697,7 +697,7 @@ function animateProgress(startMs, endMs, totalMs, durationMs, isApiCompleted) {
         function animate(currentTime) {
             let progress = Math.min((currentTime - startTime) / durationMs, 1);
 
-            // Eğer API bitmişse animasyonu hızlandır
+            // Accelerate animation if API is completed
             if (isApiCompleted && isApiCompleted()) {
                 progress = Math.min(progress * 3, 1);
             }
@@ -716,7 +716,7 @@ function animateProgress(startMs, endMs, totalMs, durationMs, isApiCompleted) {
     });
 }
 
-/** Ring SVG progress güncelle */
+/** Update Ring SVG progress */
 function updateRingProgress(percent) {
     const circumference = 2 * Math.PI * 54; // r=54
     const offset = circumference - (percent / 100) * circumference;
@@ -726,48 +726,48 @@ function updateRingProgress(percent) {
 
 // ===== RESULT SECTION =====
 
-/** Sonuç ekranını göster */
+/** Show result section */
 function showResultSection() {
     DOM.processingSection.classList.remove('visible');
     DOM.resultSection.classList.add('visible');
 
-    // Audio elementlerini oluştur
+    // Create audio elements
     AppState.originalAudio = new Audio(AppState.originalAudioUrl);
     AppState.enhancedAudio = new Audio(AppState.enhancedAudioUrl);
     AppState.currentAudio = AppState.originalAudio;
     AppState.currentMode = 'original';
 
-    // Volume ayarla
+    // Set volume
     const vol = DOM.volumeSlider.value / 100;
     AppState.originalAudio.volume = vol;
     AppState.enhancedAudio.volume = vol;
 
-    // Ses yüklendiğinde süreyi göster
+    // Show duration when audio is loaded
     AppState.originalAudio.addEventListener('loadedmetadata', () => {
         DOM.totalTime.textContent = formatTime(AppState.originalAudio.duration);
     });
 
-    // Zaman güncellemeleri
+    // Time updates
     AppState.originalAudio.addEventListener('timeupdate', updatePlayerUI);
     AppState.enhancedAudio.addEventListener('timeupdate', updatePlayerUI);
 
-    // Çalma bittiğinde
+    // When playback ends
     AppState.originalAudio.addEventListener('ended', handleAudioEnded);
     AppState.enhancedAudio.addEventListener('ended', handleAudioEnded);
 
-    // Player waveform çiz
+    // Draw player waveform
     if (AppState.originalBuffer) {
         drawPlayerWaveform(AppState.originalBuffer, 'original');
     }
 
-    // A/B modunu sıfırla
+    // Reset A/B mode
     switchMode('original');
 
-    // Lucide ikonlarını yenile
+    // Refresh Lucide icons
     lucide.createIcons();
 }
 
-/** Player UI güncelle (timeupdate) */
+/** Player Update UI (timeupdate) */
 function updatePlayerUI() {
     const audio = AppState.currentAudio;
     if (!audio || !audio.duration) return;
@@ -776,13 +776,13 @@ function updatePlayerUI() {
     DOM.progressFill.style.width = `${percent}%`;
     DOM.currentTime.textContent = formatTime(audio.currentTime);
 
-    // Playhead pozisyonu
+    // Playhead position
     const waveformWidth = DOM.playerWaveformCanvas?.parentElement?.offsetWidth || 0;
     const playheadPos = (percent / 100) * waveformWidth;
     DOM.playhead.style.left = `${playheadPos}px`;
 }
 
-/** Ses bittiğinde */
+/** When audio ends */
 function handleAudioEnded() {
     AppState.isPlaying = false;
     updatePlayPauseIcon();
@@ -790,12 +790,12 @@ function handleAudioEnded() {
 
 // ===== A/B MODE SWITCHING =====
 
-/** Original veya Enhanced moduna geç */
+/** Switch to Original or Enhanced mode */
 function switchMode(mode) {
     const wasPlaying = AppState.isPlaying;
     const currentTime = AppState.currentAudio?.currentTime || 0;
 
-    // Eğer çalıyorsa durdur
+    // Stop if playing
     if (wasPlaying) {
         AppState.currentAudio.pause();
     }
@@ -807,7 +807,7 @@ function switchMode(mode) {
         DOM.abEnhanced.classList.add('active');
         DOM.abOriginal.classList.remove('active');
         DOM.abThumb.classList.add('enhanced');
-        DOM.modeLabelText.textContent = 'Temizlenmiş Ses';
+        DOM.modeLabelText.textContent = 'Enhanced Audio';
         DOM.activeModeLabel.querySelector('.mode-dot').className = 'mode-dot enhanced';
         DOM.playhead.classList.add('enhanced-mode');
 
@@ -819,7 +819,7 @@ function switchMode(mode) {
         DOM.abOriginal.classList.add('active');
         DOM.abEnhanced.classList.remove('active');
         DOM.abThumb.classList.remove('enhanced');
-        DOM.modeLabelText.textContent = 'Orijinal Ses';
+        DOM.modeLabelText.textContent = 'Original Audio';
         DOM.activeModeLabel.querySelector('.mode-dot').className = 'mode-dot original';
         DOM.playhead.classList.remove('enhanced-mode');
 
@@ -828,14 +828,14 @@ function switchMode(mode) {
         }
     }
 
-    // Zaman pozisyonunu koru (A/B karşılaştırma için)
+    // Maintain time position (for A/B comparison)
     AppState.currentAudio.currentTime = currentTime;
 
-    // Volume koru
+    // Maintain volume
     const vol = DOM.volumeSlider.value / 100;
     AppState.currentAudio.volume = vol;
 
-    // Eğer çalıyorduysa devam et
+    // Resume if it was playing
     if (wasPlaying) {
         AppState.currentAudio.play();
     }
@@ -860,7 +860,7 @@ function togglePlayPause() {
     updatePlayPauseIcon();
 }
 
-/** Play/Pause ikon güncelle */
+/** Update Play/Pause icon */
 function updatePlayPauseIcon() {
     const iconEl = DOM.playIcon;
     if (AppState.isPlaying) {
@@ -871,13 +871,13 @@ function updatePlayPauseIcon() {
     lucide.createIcons();
 }
 
-/** Zaman atlama */
+/** Skip time */
 function skipTime(seconds) {
     if (!AppState.currentAudio) return;
     AppState.currentAudio.currentTime = Math.max(0,
         Math.min(AppState.currentAudio.duration, AppState.currentAudio.currentTime + seconds)
     );
-    // Senkronize tut
+    // Keep synchronized
     const otherAudio = AppState.currentMode === 'original'
         ? AppState.enhancedAudio
         : AppState.originalAudio;
@@ -886,7 +886,7 @@ function skipTime(seconds) {
     }
 }
 
-/** Volume değişimi */
+/** Volume change */
 function handleVolumeChange(e) {
     const vol = e.target.value / 100;
     if (AppState.originalAudio) AppState.originalAudio.volume = vol;
@@ -906,7 +906,7 @@ function toggleMute() {
     handleVolumeChange({ target: slider });
 }
 
-/** Volume ikonunu güncelle */
+/** Update volume icon */
 function updateVolumeIcon(vol) {
     const iconEl = document.getElementById('volumeIcon');
     if (vol === 0) {
@@ -919,7 +919,7 @@ function updateVolumeIcon(vol) {
     lucide.createIcons();
 }
 
-/** Progress bar tıklama */
+/** Progress bar click */
 function handleProgressClick(e) {
     if (!AppState.currentAudio) return;
     const rect = DOM.progressBarContainer.getBoundingClientRect();
@@ -927,7 +927,7 @@ function handleProgressClick(e) {
     const newTime = percent * AppState.currentAudio.duration;
     AppState.currentAudio.currentTime = newTime;
 
-    // Diğer audio'yu da senkronize et
+    // Synchronize the other audio as well
     const otherAudio = AppState.currentMode === 'original'
         ? AppState.enhancedAudio
         : AppState.originalAudio;
@@ -936,7 +936,7 @@ function handleProgressClick(e) {
     }
 }
 
-/** Waveform tıklama */
+/** Waveform click */
 function handleWaveformClick(e) {
     if (!AppState.currentAudio) return;
     const rect = DOM.playerWaveformCanvas.parentElement.getBoundingClientRect();
@@ -954,32 +954,32 @@ function handleWaveformClick(e) {
 
 // ===== DOWNLOAD =====
 
-/** İşlenmiş sesi indir */
+/** Download processed audio */
 function handleDownload(format) {
     if (!AppState.enhancedAudioUrl && !AppState.enhancedBuffer) {
-        showToast('İndirilecek bir işlenmiş ses bulunamadı.', 'error');
+        showToast('No processed audio found to download.', 'error');
         return;
     }
 
     const fileName = AppState.currentFile?.name?.replace(/\.[^.]+$/, '') || 'vocal_enhanced';
     const finalFileName = `${fileName}_enhanced.wav`;
 
-    // Mobil cihaz kontrolü (iPhone/iPad için kritik)
+    // Mobile device check (critical for iPhone/iPad)
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     if (format === 'wav') {
         if (AppState.enhancedBuffer) {
             const blob = audioBufferToWav(AppState.enhancedBuffer);
             
-            // iPhone/Mobil için Yerel Paylaş Menüsü (Web Share API)
+            // Native Share Menu for iPhone/Mobile (Web Share API)
             if (isMobile && navigator.share) {
                 const file = new File([blob], finalFileName, { type: 'audio/wav' });
                 navigator.share({
                     files: [file],
-                    title: 'Temizlenmiş Ses',
-                    text: 'VocalCleaner tarafından iyileştirildi'
+                    title: 'Enhanced Audio',
+                    text: 'Enhanced by VocalCleaner'
                 }).catch(err => {
-                    console.log('Paylaşma iptal edildi veya hata:', err);
+                    console.log('Sharing canceled or error:', err);
                     downloadBlob(blob, finalFileName);
                 });
             } else {
@@ -989,20 +989,20 @@ function handleDownload(format) {
             downloadFromUrl(AppState.enhancedAudioUrl, finalFileName);
         }
     } else {
-        // MP3 (Şu an WAV olarak iner)
+        // MP3 (Currently downloads as WAV)
         if (AppState.enhancedBuffer) {
             const blob = audioBufferToWav(AppState.enhancedBuffer);
             downloadBlob(blob, `${fileName}_enhanced.wav`);
-            showToast('Not: WAV olarak indirildi. MP3 için backend gerekli.', 'info');
+            showToast('Note: Downloaded as WAV. Backend required for MP3.', 'info');
         } else {
             downloadFromUrl(AppState.enhancedAudioUrl, `${fileName}_enhanced.mp3`);
         }
     }
 
-    showToast('İndirme başladı!', 'success');
+    showToast('Download started!', 'success');
 }
 
-/** Blob'u dosya olarak indir */
+/** Download Blob as file */
 function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1014,7 +1014,7 @@ function downloadBlob(blob, filename) {
     URL.revokeObjectURL(url);
 }
 
-/** URL'den dosya indir */
+/** Download file from URL */
 function downloadFromUrl(url, filename) {
     const a = document.createElement('a');
     a.href = url;
@@ -1026,9 +1026,9 @@ function downloadFromUrl(url, filename) {
 
 // ===== NEW FILE =====
 
-/** Yeni dosya yükleme — sıfırla */
+/** Upload new file — reset */
 function handleNewFile() {
-    // Çalan sesi durdur
+    // Stop playing audio
     if (AppState.originalAudio) {
         AppState.originalAudio.pause();
         AppState.originalAudio = null;
@@ -1040,13 +1040,13 @@ function handleNewFile() {
     AppState.isPlaying = false;
     AppState.currentAudio = null;
 
-    // Tüm adımları sıfırla
+    // Reset all steps
     DOM.steps.forEach(step => {
         step.classList.remove('active', 'completed');
     });
     updateRingProgress(0);
 
-    // UI sıfırla
+    // Reset UI
     DOM.resultSection.classList.remove('visible');
     DOM.processingSection.classList.remove('visible');
     DOM.heroSection.classList.remove('hidden');
@@ -1054,7 +1054,7 @@ function handleNewFile() {
 
     resetUpload();
 
-    // Navigasyon
+    // Navigation
     document.querySelector('.nav-link[data-section="upload"]')?.classList.add('active');
     document.querySelector('.nav-link[data-section="studio"]')?.classList.remove('active');
 
@@ -1063,7 +1063,7 @@ function handleNewFile() {
 
 // ===== UTILITY FUNCTIONS =====
 
-/** AudioBuffer → WAV Blob dönüştürücü */
+/** AudioBuffer → WAV Blob converter */
 function audioBufferToWav(buffer) {
     const numChannels = buffer.numberOfChannels;
     const sampleRate = buffer.sampleRate;
@@ -1113,14 +1113,14 @@ function audioBufferToWav(buffer) {
     return new Blob([arrayBuffer], { type: 'audio/wav' });
 }
 
-/** DataView'a string yaz */
+/** Write string to DataView */
 function writeString(view, offset, string) {
     for (let i = 0; i < string.length; i++) {
         view.setUint8(offset + i, string.charCodeAt(i));
     }
 }
 
-/** Dosya boyutunu formatla */
+/** Format file size */
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -1129,7 +1129,7 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-/** Zamanı mm:ss formatında göster */
+/** Show time in mm:ss format */
 function formatTime(seconds) {
     if (isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -1137,17 +1137,17 @@ function formatTime(seconds) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-/** Easing fonksiyonu */
+/** Easing function */
 function easeInOutCubic(t) {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-/** Gecikme yardımcısı */
+/** Delay helper */
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/** Toast bildirim göster */
+/** Show toast notification */
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.classList.add('toast', type);
@@ -1166,7 +1166,7 @@ function showToast(message, type = 'info') {
     DOM.toastContainer.appendChild(toast);
     lucide.createIcons();
 
-    // 4 saniye sonra kaldır
+    // Remove after 4 seconds
     setTimeout(() => {
         toast.classList.add('fade-out');
         setTimeout(() => toast.remove(), 300);
