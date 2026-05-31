@@ -84,6 +84,6 @@ Open `http://localhost:3456` in your browser and experience local-first AI audio
 
 Engineered by **Oğuz Emir Topuz**.
 
-*   **Age:** 14
+*   **Age:** 15
 *   **Passions:** Football Analyst & Advanced Fullstack Software Developer.
 *   **Connect:** [My GitHub Portfolio](https://github.com/oguzemirtopuz)
