@@ -12,6 +12,8 @@
 **VocalCleaner is deployed and live on Render!**  
 👉 **[Try VocalCleaner Live App Now!](https://vocalcleaner.onrender.com/)** 🌐
 
+> ⚠️ **Note:** VocalCleaner is hosted on Render's free tier. If the app hasn't been used recently, the first load may take **1–2 minutes** while the server wakes up. This is normal — please wait and then refresh the page.
+
 ---
 
 ## 🎛️ The Dual-Engine Pipeline (Surgical Approach)
