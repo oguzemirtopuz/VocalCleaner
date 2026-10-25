@@ -1,69 +1,136 @@
-# 🎤 VocalCleaner — Dual-Engine AI Audio Enhancer & Mastering Pipeline 🎚️
+<div align="center">
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
 [![CleanVoice AI](https://img.shields.io/badge/CleanVoice-AI_Denoise-8E75C2?style=for-the-badge)](https://cleanvoice.ai)
-[![Auphonic](https://img.shields.io/badge/Auphonic-Studio_Mastering-1b2838?style=for-the-badge)](https://auphonic.com)
-[![Render Deployment](https://img.shields.io/badge/Render-Live_App-46e3b7?style=for-the-badge&logo=render&logoColor=white)](https://vocalcleaner.onrender.com/)
+[![Auphonic](https://img.shields.io/badge/Auphonic-Broadcast_Mastering-1b2838?style=for-the-badge)](https://auphonic.com)
+[![Live App](https://img.shields.io/badge/Render-Live_App-46e3b7?style=for-the-badge&logo=render&logoColor=white)](https://vocalcleaner.onrender.com/)
 
-**VocalCleaner** is a production-grade, dual-engine AI audio enhancing studio pipeline built with **Node.js** and **Express**. It seamlessly chains the surgical noise cleaning power of **CleanVoice AI** with the premium broadcast-level mastering abilities of **Auphonic API**, converting raw, noisy recordings into polished, radio-ready studio vocals in seconds.
+<h1>🎤 VocalCleaner</h1>
+<h3>Your recording sounds like it was made in a bathroom. Fix it in 90 seconds.</h3>
 
-## 🚀 Live Demo
-**VocalCleaner is deployed and live on Render!**  
-👉 **[Try VocalCleaner Live App Now!](https://vocalcleaner.onrender.com/)** 🌐
+<p><em>Dual-engine AI audio pipeline · CleanVoice denoise → Auphonic mastering · Broadcast-ready output</em></p>
 
-> ⚠️ **Note:** VocalCleaner is hosted on Render's free tier. If the app hasn't been used recently, the first load may take **1–2 minutes** while the server wakes up. This is normal — please wait and then refresh the page.
+**[🚀 Try VocalCleaner Live](https://vocalcleaner.onrender.com/)**
+
+> ⚠️ Hosted on Render's free tier. First load may take 1–2 minutes while the server wakes up — then it's instant.
+
+</div>
+
+<div align="center">
+  <img src="preview.gif" alt="Project Preview" width="100%" />
+</div>
 
 ---
 
-## 🎛️ The Dual-Engine Pipeline (Surgical Approach)
+## 🎯 What Problem Does This Solve?
 
-Rather than running a generic double-filtering pass that causes metallic audio distortions, VocalCleaner utilizes an optimized, non-destructive chain:
+Audio quality is the single most important factor in podcast and video production. Studies show listeners will tolerate average video but stop watching immediately for bad audio.
+
+The problem: professional audio cleanup tools (Adobe Audition, iZotope RX) cost hundreds of dollars and take hours to learn. Generic one-click online tools run a heavy noise reduction pass that creates metallic artifacts and EQ distortion — you remove the noise but damage the voice.
+
+**VocalCleaner** solves this with a precision two-stage pipeline:
+
+1. **CleanVoice AI** performs surgical denoise — targeting only background hum, breath noises, and mouth clicks without touching the voice timbre
+2. **Auphonic** then restores brightness, normalizes loudness to broadcast standard (-16 LUFS), and controls sibilance
+
+The result is broadcast-ready audio from a raw, noisy recording — in 90 seconds, for free.
+
+---
+
+## 👥 Who This Is For
+
+- **Podcasters** recording from home who want studio-quality output without expensive equipment
+- **YouTubers** who record voiceovers in imperfect acoustic environments
+- **Online educators** who need clean, professional audio for video courses
+- **Remote workers** on video calls who want to clean up recordings before sharing
+- **Node.js developers** studying async API orchestration with external AI services
+
+---
+
+## ⚡ Key Benefits
+
+- **No software to install:** Runs in your browser — upload, wait, download
+- **No metallic artifacts:** The two-stage approach applies the right tool at the right stage, preventing destructive EQ distortion
+- **Broadcast standard output:** -16 LUFS loudness normalization matches the spec for YouTube, Spotify podcasts, and broadcast TV
+- **Adjustable intensity:** Choose Light, Medium, or Aggressive noise reduction based on your recording environment
+- **Asynchronous processing:** Upload and get a job ID — the app polls status without blocking your browser
+
+---
+
+## 🔬 The Dual-Engine Pipeline
+
+Rather than running a generic double-filter pass that creates artifacts, VocalCleaner applies each AI at the stage where it excels:
 
 ```mermaid
 graph LR
-    Raw[Raw MP3/WAV] -->|Upload| CV[CleanVoice AI: Phase 1]
-    CV -->|Surgical Cleaning: Noise, Mouth, Breath| Aup[Auphonic API: Phase 2]
-    Aup -->|Mastering: Leveler, EQ recovery, Sibilance| Final[Broadcast Studio Output]
+    Raw[Raw MP3/WAV Upload] -->|Phase 1| CV[CleanVoice AI]
+    CV -->|Noise, Breath, Mouth clicks removed| Aup[Auphonic API]
+    Aup -->|EQ recovery, -16 LUFS, de-essing| Final[Broadcast-Ready Output]
 ```
 
-### 🔬 Phase 1: CleanVoice AI (Surgical Denoise)
-*   **Pure Noise Extraction:** Targets and cleans heavy background hums, breath noises, and mouth clicks without affecting the natural voice timbre.
-*   **No Auto-EQ Distortion:** Deactivates automated EQ shaping and normalizations in this phase to prevent compression artifacts.
+### Phase 1: CleanVoice AI (Surgical Denoise)
+- Removes background hum, breath noise, and mouth clicks
+- Auto-EQ and normalizations are **deliberately disabled** in this phase to prevent compression artifacts
+- Natural voice timbre is preserved
 
-### 🎚️ Phase 2: Auphonic API (Studio Mastering)
-*   **EQ & Frequency Recovery:** Boosts high frequencies (3–8 kHz EQ recovery) to restore natural brightness removed during noise cancellation.
-*   **Adaptive Levelling & De-essing:** balances vocal spikes, controls sharp sibilance, and applies broadcast standard -16 LUFS loudness normalization.
-*   **De-noise Gate Deactivated:** Kept off during this phase to prevent choppy silence gaps.
-
----
-
-## ✨ System Architecture & APIs
-
-*   **Asynchronous Processing:** Accepts audio uploads, writes them to disk to protect RAM, boots up the CleanVoice process, and immediately returns a unique `editId` to the client. The frontend tracks the job asynchronously via status polling.
-*   **Proxy-Safe Downloader:** Features a custom redirect-tracing downloader that securely pulls mastered files from Auphonic S3 buckets, bypassing standard browser CORs policies.
-*   **Responsive Control Dashboard:** A premium web UI built with Vanilla JS and CSS3 supporting intensity parameters (Light, Medium, Aggressive) and clean file download actions.
+### Phase 2: Auphonic (Studio Mastering)
+- High-frequency EQ recovery (3–8 kHz) — restores brightness removed during noise cancellation
+- Adaptive volume leveling — smooths vocal volume spikes
+- De-essing — controls sharp sibilance (`s` and `sh` sounds)
+- Loudness normalization to -16 LUFS (broadcast standard)
+- De-noise gate kept **off** in this phase to prevent choppy silence gaps
 
 ---
 
-## 🔒 Security Configuration
+## 🛠️ Technical Architecture
 
-*   **Credential Hiding:** All cleanvoice and auphonic credentials are securely managed via environment variables (`.env`).
-*   **Clean Git Footprint:** Excludes `.env`, local `node_modules/`, local compiled static assets (`dist/`), and local zip backups (`*.zip`, `*.rar`) to prevent security and space overhead on GitHub.
+```
+VocalCleaner Backend (Node.js + Express)
+│
+├── Upload Handler
+│   ├── Receives audio file upload (MP3/WAV)
+│   └── Writes to disk (protects RAM from large files)
+│
+├── CleanVoice Integration
+│   ├── Submits file to CleanVoice API
+│   ├── Returns unique editId to client
+│   └── Client polls /api/status/:editId for completion
+│
+├── Auphonic Integration
+│   ├── Receives CleanVoice output
+│   ├── Creates Auphonic production with configured presets
+│   └── Waits for broadcast mastering completion
+│
+└── Proxy Downloader
+    ├── Traces redirects to Auphonic S3 bucket
+    ├── Bypasses browser CORS policies
+    └── Returns final audio file to client
+```
+
+**Tech Stack:**
+- **Backend:** Node.js · Express · Multer (file handling)
+- **AI Services:** CleanVoice API (denoise) · Auphonic API (mastering)
+- **Frontend:** Vanilla JS · CSS3 · Intensity slider controls
+- **Deployment:** Render (live at vocalcleaner.onrender.com)
+- **Security:** All API credentials via environment variables
 
 ---
 
-## 🚀 How to Set Up & Run Locally
+## 🚀 Run Locally
 
-### 1. Prerequisites
-*   **Node.js:** Ensure Node.js (v18+) is installed.
+### Prerequisites
+- Node.js v18+
 
-### 2. Clone and Configure
+### Setup & Launch
+
 ```bash
 git clone https://github.com/oguzemirtopuz/VocalCleaner.git
 cd VocalCleaner
+npm install
 ```
-Create a `.env` file in the root folder and add your API credentials:
+
+Create a `.env` file with your API credentials:
 ```env
 CLEANVOICE_API_KEY=your_cleanvoice_api_key_here
 AUPHONIC_USER=your_auphonic_username_here
@@ -71,19 +138,42 @@ AUPHONIC_PASS=your_auphonic_password_here
 PORT=3456
 ```
 
-### 3. Install & Start
 ```bash
-npm install
 npm start
+# → http://localhost:3456
 ```
-Open `http://localhost:3456` in your browser and experience local-first AI audio mastering!
+
+Get free API keys: [CleanVoice](https://cleanvoice.ai) · [Auphonic](https://auphonic.com)
 
 ---
 
-## 👤 Developer Profile
+## 🗺️ Roadmap
 
-Engineered by **Oğuz Emir Topuz**.
+- [ ] Drag-and-drop file upload UI
+- [ ] Batch processing (multiple files in one session)
+- [ ] Output format selection (MP3, WAV, FLAC)
+- [ ] Custom LUFS target (podcast vs. broadcast vs. streaming)
+- [ ] Before/after waveform comparison
 
-*   **Age:** 15
-*   **Passions:** Football Analyst & Advanced Fullstack Software Developer.
-*   **Connect:** [My GitHub Portfolio](https://github.com/oguzemirtopuz)
+---
+
+## 🤝 Contributing
+
+Contributions welcome. Priority areas:
+- Additional audio processing stages (room reverb removal)
+- Better status polling UX (progress bar instead of spinner)
+- Mobile-responsive UI improvements
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+  <sub>Built by <a href="https://github.com/oguzemirtopuz">Oğuz Emir Topuz</a></sub>
+  <br/>
+  <sub>⭐ If this gave your voice professional quality, star the repo.</sub>
+</div>
